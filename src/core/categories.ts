@@ -1,0 +1,38 @@
+// Canonical Firefox iOS logger categories, mirrored from
+// BrowserKit/Sources/Common/Logger/LoggerCategory.swift (sorted alphabetically).
+// Keep in sync if that enum changes.
+
+export const LOG_CATEGORIES: string[] = [
+  'adblock',
+  'appIcon',
+  'autofill',
+  'certificate',
+  'coordinator',
+  'experiments',
+  'homepage',
+  'images',
+  'library',
+  'lifecycle',
+  'locale',
+  'mainMenu',
+  'merino',
+  'onboarding',
+  'passwordGenerator',
+  'redux',
+  'relay',
+  'remoteSettings',
+  'searchEngines',
+  'settings',
+  'setup',
+  'shareSheet',
+  'shortcutsLibrary',
+  'speech',
+  'storage',
+  'sync',
+  'tabs',
+  'telemetry',
+  'translations',
+  'wallpaper',
+  'webview',
+  'window',
+];

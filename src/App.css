@@ -1,0 +1,194 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ---- Toolbar ---- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #252526;
+  border-bottom: 1px solid #3c3c3c;
+  flex: 0 0 auto;
+  font-size: 13px;
+}
+
+.toolbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #b0b0b0;
+}
+
+.toolbar select,
+.toolbar input[type='text'],
+.toolbar button {
+  background: #3c3c3c;
+  color: #e0e0e0;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.toolbar button {
+  cursor: pointer;
+}
+.toolbar button:hover:not(:disabled) {
+  background: #4a4a4a;
+}
+.toolbar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.search {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.search input {
+  width: 220px;
+}
+.search .count {
+  color: #9aa0a6;
+  min-width: 44px;
+  font-variant-numeric: tabular-nums;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+.meta {
+  color: #8a8f98;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* ---- Viewport ---- */
+.viewport {
+  flex: 1 1 auto;
+  overflow: auto;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7075;
+  font-family: system-ui, sans-serif;
+  font-size: 15px;
+}
+.empty.drag {
+  background: rgba(80, 140, 220, 0.12);
+  outline: 2px dashed #508cdc;
+  outline-offset: -12px;
+}
+
+/* ---- Rows ---- */
+.row {
+  display: flex;
+  align-items: baseline;
+  white-space: pre;
+  cursor: default;
+  padding-right: 12px;
+}
+.row:hover {
+  background: #2a2d2e;
+}
+.row .gutter {
+  flex: 0 0 auto;
+  width: 62px;
+  padding-right: 12px;
+  text-align: right;
+  color: #5a5f66;
+  user-select: none;
+}
+.row .content {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* whole-line severity tint */
+.row.lvl-warning {
+  background: rgba(243, 156, 18, 0.08);
+}
+.row.lvl-fatal {
+  background: rgba(255, 85, 85, 0.14);
+}
+
+/* selection (single row) */
+.row.selected {
+  background: #094771 !important;
+}
+
+/* active search match row */
+.row.current-match {
+  box-shadow: inset 2px 0 0 #ffd166;
+}
+
+/* ---- Highlight tokens (ported from the klogg rules) ---- */
+.plain,
+.msg {
+  color: #d4d4d4;
+}
+.tok-ts {
+  color: #808080;
+}
+.tok-cat {
+  color: #17a2b8;
+}
+.tok-comp {
+  color: #20c997;
+}
+.tok-level {
+  font-weight: 600;
+}
+.tok-level-debug {
+  color: #8a8f98;
+}
+.tok-level-info {
+  color: #5dade2;
+}
+.tok-level-warning {
+  color: #f39c12;
+}
+.tok-level-fatal {
+  color: #ff5555;
+}
+
+.hot-crash {
+  color: #ffffff;
+  background: #b10dc9;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+.hot-life {
+  color: #2ecc71;
+  font-weight: 600;
+}
+.hot-sync {
+  color: #ff8c00;
+}
+.hot-tabs {
+  color: #e67e22;
+}
+
+/* search hit overlay (keeps the underlying token color) */
+.search-hit {
+  background: #6b5900;
+  color: #fff2b0;
+  border-radius: 2px;
+}
+.current-match .search-hit {
+  background: #ffd166;
+  color: #1e1e1e;
+}
