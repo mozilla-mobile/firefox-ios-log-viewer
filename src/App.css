@@ -7,13 +7,19 @@
 /* ---- Toolbar ---- */
 .toolbar {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
   padding: 8px 12px;
   background: #252526;
   border-bottom: 1px solid #3c3c3c;
   flex: 0 0 auto;
   font-size: 13px;
+}
+
+.toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .toolbar label {
@@ -25,6 +31,7 @@
 
 .toolbar select,
 .toolbar input[type='text'],
+.toolbar input[type='datetime-local'],
 .toolbar button {
   background: #3c3c3c;
   color: #e0e0e0;
@@ -32,6 +39,30 @@
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 13px;
+}
+
+/* render the native date/time picker controls in dark mode */
+.toolbar input[type='datetime-local'] {
+  color-scheme: dark;
+}
+
+/* hide the pop-up calendar trigger; the date/time segments stay editable */
+.toolbar input[type='datetime-local']::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+/* conventional primary button, kept on a single line */
+.toolbar button.open-btn {
+  background: #0e639c;
+  border-color: #0e639c;
+  color: #ffffff;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 5px 14px;
+}
+.toolbar button.open-btn:hover:not(:disabled) {
+  background: #1177bb;
+  border-color: #1177bb;
 }
 
 .toolbar button {

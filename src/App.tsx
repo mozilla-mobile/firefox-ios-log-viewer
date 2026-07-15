@@ -15,6 +15,8 @@ export default function App() {
   const [fileName, setFileName] = useState('');
   const [level, setLevel] = useState<LogLevel | ''>('');
   const [category, setCategory] = useState<string>('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const [query, setQuery] = useState('');
   const [committedQuery, setCommittedQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -25,9 +27,24 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(
-    () => filterLines(lines, { level, category }),
-    [lines, level, category]
+    () => filterLines(lines, { level, category, from, to }),
+    [lines, level, category, from, to]
   );
+
+  // Earliest/latest timestamps in the file, as `datetime-local` values, used to
+  // bound the range pickers. Log timestamps are lexicographically sortable, so
+  // plain string min/max works.
+  const timeBounds = useMemo(() => {
+    let min = '';
+    let max = '';
+    for (const l of lines) {
+      if (!l.timestamp) continue;
+      if (!min || l.timestamp < min) min = l.timestamp;
+      if (!max || l.timestamp > max) max = l.timestamp;
+    }
+    const toInput = (ts: string) => (ts ? ts.replace(' ', 'T').slice(0, 19) : '');
+    return { min: toInput(min), max: toInput(max) };
+  }, [lines]);
 
   // Match positions are indices into `filtered`.
   const matches = useMemo(
@@ -46,10 +63,13 @@ export default function App() {
     ? matches[Math.min(currentMatch, matches.length - 1)]
     : -1;
 
-  // Scroll to the active match whenever it changes.
+  // Scroll to the active match whenever it changes, and select its line so the
+  // current hit is highlighted just like a clicked row.
   useEffect(() => {
     if (currentMatchRow >= 0) {
       virtualizer.scrollToIndex(currentMatchRow, { align: 'center' });
+      const line = filtered[currentMatchRow];
+      if (line) setSelectedIndex(line.index);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentMatchRow]);
@@ -62,10 +82,12 @@ export default function App() {
     setCurrentMatch(0);
   }, []);
 
-  const commitSearch = useCallback(() => {
-    setCommittedQuery(query);
-    setCurrentMatch(0);
-  }, [query]);
+  // Prefill the range pickers with the file's first/last timestamp whenever a
+  // new file is loaded. Keyed on the bounds, which only change with `lines`.
+  useEffect(() => {
+    setFrom(timeBounds.min);
+    setTo(timeBounds.max);
+  }, [timeBounds.min, timeBounds.max]);
 
   const step = useCallback(
     (dir: 1 | -1) => {
@@ -75,11 +97,16 @@ export default function App() {
     [matches.length]
   );
 
+  // Search runs live on every change, so `query` and `committedQuery` stay in
+  // sync; Enter just steps between the existing matches.
+  const onSearchChange = useCallback((value: string) => {
+    setQuery(value);
+    setCommittedQuery(value);
+    setCurrentMatch(0);
+  }, []);
+
   const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      if (query !== committedQuery) commitSearch();
-      else step(e.shiftKey ? -1 : 1);
-    }
+    if (e.key === 'Enter') step(e.shiftKey ? -1 : 1);
   };
 
   const onSelect = useCallback((index: number) => {
@@ -104,70 +131,114 @@ export default function App() {
       }}
     >
       <div className="toolbar">
-        <button onClick={() => fileInputRef.current?.click()}>Open log…</button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          style={{ display: 'none' }}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) loadFile(f);
-          }}
-        />
-
-        <label>
-          Level
-          <select value={level} onChange={(e) => setLevel(e.target.value as LogLevel | '')}>
-            <option value="">All</option>
-            {LOG_LEVELS.map((l) => (
-              <option key={l} value={l}>
-                {l}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          Category
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            <option value="">All</option>
-            {LOG_CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <div className="search">
+        <div className="toolbar-row">
+          <button className="open-btn" onClick={() => fileInputRef.current?.click()}>
+            Open Log…
+          </button>
           <input
-            type="text"
-            placeholder="Search text…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={onSearchKey}
+            ref={fileInputRef}
+            type="file"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) loadFile(f);
+            }}
           />
-          <button onClick={() => step(-1)} disabled={!matches.length} title="Previous (Shift+Enter)">
-            ↑
-          </button>
-          <button onClick={() => step(1)} disabled={!matches.length} title="Next (Enter)">
-            ↓
-          </button>
-          <span className="count">
-            {committedQuery
-              ? matches.length
-                ? `${currentMatch + 1}/${matches.length}`
-                : '0/0'
+
+          <label>
+            Level
+            <select value={level} onChange={(e) => setLevel(e.target.value as LogLevel | '')}>
+              <option value="">All</option>
+              {LOG_LEVELS.map((l) => (
+                <option key={l} value={l}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Category
+            <select value={category} onChange={(e) => setCategory(e.target.value)}>
+              <option value="">All</option>
+              {LOG_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="spacer" />
+          <span className="meta">
+            {fileName
+              ? `${fileName} — ${filtered.length.toLocaleString()} / ${lines.length.toLocaleString()} lines`
               : ''}
           </span>
         </div>
 
-        <div className="spacer" />
-        <span className="meta">
-          {fileName
-            ? `${fileName} — ${filtered.length.toLocaleString()} / ${lines.length.toLocaleString()} lines`
-            : ''}
-        </span>
+        <div className="toolbar-row">
+          <label>
+            From
+            <input
+              type="datetime-local"
+              step="1"
+              value={from}
+              min={timeBounds.min}
+              max={timeBounds.max}
+              onChange={(e) => setFrom(e.target.value)}
+            />
+          </label>
+
+          <label>
+            To
+            <input
+              type="datetime-local"
+              step="1"
+              value={to}
+              min={timeBounds.min}
+              max={timeBounds.max}
+              onChange={(e) => setTo(e.target.value)}
+            />
+          </label>
+
+          {(from || to) && (
+            <button
+              onClick={() => {
+                setFrom('');
+                setTo('');
+              }}
+              title="Clear date range"
+            >
+              Clear dates
+            </button>
+          )}
+        </div>
+
+        <div className="toolbar-row">
+          <div className="search">
+            <input
+              type="text"
+              placeholder="Search text…"
+              value={query}
+              onChange={(e) => onSearchChange(e.target.value)}
+              onKeyDown={onSearchKey}
+            />
+            <button onClick={() => step(-1)} disabled={!matches.length} title="Previous (Shift+Enter)">
+              ↑
+            </button>
+            <button onClick={() => step(1)} disabled={!matches.length} title="Next (Enter)">
+              ↓
+            </button>
+            <span className="count">
+              {committedQuery
+                ? matches.length
+                  ? `${currentMatch + 1}/${matches.length}`
+                  : '0/0'
+                : ''}
+            </span>
+          </div>
+        </div>
       </div>
 
       <div className="viewport" ref={scrollRef}>
