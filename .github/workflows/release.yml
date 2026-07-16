@@ -31,15 +31,18 @@ jobs:
           # Version scheme: 0.MINOR.0, starting at 0.1.0 and bumping the minor
           # on every run. The source of truth is the latest published release;
           # the repo files are not committed back to.
+          #
+          # NOTE: on a 404 (no releases yet) `gh api --jq` still prints the raw
+          # error JSON to stdout, so a plain emptiness check is not enough — we
+          # only trust a value that looks like a semver tag, else start at 0.1.0.
           latest=$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" \
             --jq .tag_name 2>/dev/null || true)
-          if [ -z "$latest" ]; then
-            next="0.1.0"
-          else
-            v=${latest#v}
-            major=$(echo "$v" | cut -d. -f1)
-            minor=$(echo "$v" | cut -d. -f2)
+          if [[ "$latest" =~ ^v?([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            major=${BASH_REMATCH[1]}
+            minor=${BASH_REMATCH[2]}
             next="${major}.$((minor + 1)).0"
+          else
+            next="0.1.0"
           fi
           echo "Latest release: ${latest:-<none>} -> next: $next"
           echo "version=$next" >> "$GITHUB_OUTPUT"
