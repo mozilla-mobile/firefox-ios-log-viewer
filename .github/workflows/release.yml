@@ -1,0 +1,108 @@
+name: Build & Release DMG
+
+# Manually triggered. Each run computes the next version (minor bump), builds
+# the macOS DMG, and publishes a GitHub Release with the DMG attached.
+on:
+  workflow_dispatch:
+
+# Needed to create tags/releases with the built-in GITHUB_TOKEN.
+permissions:
+  contents: write
+
+# Never run two releases at once — they would race on the version number.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-latest # Apple Silicon → builds an aarch64 DMG
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute next version
+        id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Version scheme: 0.MINOR.0, starting at 0.1.0 and bumping the minor
+          # on every run. The source of truth is the latest published release;
+          # the repo files are not committed back to.
+          latest=$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" \
+            --jq .tag_name 2>/dev/null || true)
+          if [ -z "$latest" ]; then
+            next="0.1.0"
+          else
+            v=${latest#v}
+            major=$(echo "$v" | cut -d. -f1)
+            minor=$(echo "$v" | cut -d. -f2)
+            next="${major}.$((minor + 1)).0"
+          fi
+          echo "Latest release: ${latest:-<none>} -> next: $next"
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+          echo "tag=v$next" >> "$GITHUB_OUTPUT"
+
+      - name: Apply version to build config
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          # tauri.conf.json drives the app version and the DMG file name.
+          tmp=$(mktemp)
+          jq --arg v "$VERSION" '.version = $v' src-tauri/tauri.conf.json > "$tmp"
+          mv "$tmp" src-tauri/tauri.conf.json
+          # Keep the Rust crate version in sync (first `version = ` line only;
+          # awk handles first-match-only portably, unlike BSD sed's `0,/re/`).
+          awk -v v="$VERSION" \
+            '!done && /^version = "/ { sub(/"[^"]*"/, "\"" v "\""); done=1 } { print }' \
+            src-tauri/Cargo.toml > src-tauri/Cargo.toml.tmp
+          mv src-tauri/Cargo.toml.tmp src-tauri/Cargo.toml
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build DMG
+        run: npm run tauri:build
+
+      - name: Locate DMG
+        id: dmg
+        run: |
+          set -euo pipefail
+          dmg=$(ls src-tauri/target/release/bundle/dmg/*.dmg | head -1)
+          echo "Found: $dmg"
+          echo "path=$dmg" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          DMG: ${{ steps.dmg.outputs.path }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --target "$GITHUB_SHA" \
+            --generate-notes \
+            "$DMG"
