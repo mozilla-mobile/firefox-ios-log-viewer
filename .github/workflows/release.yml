@@ -87,6 +87,20 @@ jobs:
         run: npm ci
 
       - name: Build DMG
+        # Tauri reads these env vars during `tauri build`: the first group
+        # imports the Developer ID cert and code-signs the app; the second
+        # notarizes and staples it. If the secrets are unset (empty), Tauri
+        # falls back to an ad-hoc signature and skips notarization, so this
+        # step stays green until the secrets are configured.
+        env:
+          # Code signing
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # Notarization (Apple ID + app-specific password)
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npm run tauri:build
 
       - name: Locate DMG
