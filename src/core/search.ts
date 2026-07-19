@@ -1,6 +1,9 @@
 import type { LogLevel, LogLine } from './types';
+import { LOG_LEVELS } from './types';
 
 export interface Filters {
+  /// Minimum severity to show: the selected level and everything above it.
+  /// Severity order is the index in LOG_LEVELS (DEBUG < INFO < WARNING < FATAL).
   level: LogLevel | '';
   category: string | '';
   /// Inclusive lower/upper bounds as `datetime-local` input values
@@ -19,16 +22,18 @@ function timeKey(value: string, pad: '0' | '9' = '0'): string {
   return (value.replace(/\D/g, '') + pad.repeat(17)).slice(0, 17);
 }
 
-/// Filter parsed lines by level, category, and/or timestamp range. Empty string
-/// means "any". Unstructured lines (no level/category/timestamp) are hidden when
-/// any filter is active.
+/// Filter parsed lines by minimum level, category, and/or timestamp range.
+/// Empty string means "any". `level` is a threshold: the selected level and any
+/// more severe are kept. Unstructured lines (no level/category/timestamp) are
+/// hidden when the corresponding filter is active.
 export function filterLines(lines: LogLine[], filters: Filters): LogLine[] {
   const { level, category, from, to } = filters;
+  const minRank = level ? LOG_LEVELS.indexOf(level) : -1;
   const fromKey = from ? timeKey(from, '0') : '';
   const toKey = to ? timeKey(to, '9') : '';
-  if (!level && !category && !fromKey && !toKey) return lines;
+  if (minRank < 0 && !category && !fromKey && !toKey) return lines;
   return lines.filter((l) => {
-    if (level && l.level !== level) return false;
+    if (minRank >= 0 && (!l.level || LOG_LEVELS.indexOf(l.level) < minRank)) return false;
     if (category && l.category !== category) return false;
     if (fromKey || toKey) {
       if (!l.timestamp) return false;

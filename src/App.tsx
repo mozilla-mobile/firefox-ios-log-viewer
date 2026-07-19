@@ -146,7 +146,7 @@ export default function App() {
           />
 
           <label>
-            Level
+            Min level
             <select value={level} onChange={(e) => setLevel(e.target.value as LogLevel | '')}>
               <option value="">All</option>
               {LOG_LEVELS.map((l) => (
