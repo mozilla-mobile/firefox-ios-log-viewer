@@ -244,7 +244,7 @@ export default function App() {
       <div className="viewport" ref={scrollRef}>
         {lines.length === 0 ? (
           <div className={`empty ${dragOver ? 'drag' : ''}`}>
-            Drop a log file here, or click <em>Open log…</em>
+            Drop a log file here, or click <em>Open Log…</em>
           </div>
         ) : (
           <div className="rows" style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
