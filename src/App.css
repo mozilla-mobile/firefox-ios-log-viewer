@@ -92,6 +92,62 @@
   border-color: rgba(31, 35, 40, 0.15);
 }
 
+/* ---- Category multi-select dropdown ---- */
+.multiselect {
+  position: relative;
+  display: inline-flex;
+}
+.multiselect-toggle .caret {
+  color: var(--fg-muted);
+  font-size: 10px;
+}
+.multiselect-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  min-width: 220px;
+  max-height: 340px;
+  display: flex;
+  flex-direction: column;
+  background: var(--canvas-default);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(31, 35, 40, 0.2);
+  overflow: hidden;
+}
+.multiselect-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border-muted);
+}
+.multiselect-actions button {
+  flex: 1 1 auto;
+}
+.multiselect-list {
+  overflow-y: auto;
+  padding: 4px;
+}
+.multiselect-list .multiselect-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: var(--fg-default);
+  font-weight: 400;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.multiselect-list .multiselect-item:hover {
+  background: var(--canvas-subtle);
+}
+.multiselect-list .multiselect-item input {
+  margin: 0;
+  cursor: pointer;
+}
+
 .search {
   display: inline-flex;
   align-items: center;
