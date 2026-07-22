@@ -6,6 +6,7 @@ import { LOG_CATEGORIES } from './core/categories';
 import { parseLog } from './core/parser';
 import { filterLines, findMatches } from './core/search';
 import { LogRow } from './components/LogRow';
+import { CategoryFilter } from './components/CategoryFilter';
 import './App.css';
 
 const ROW_HEIGHT = 20;
@@ -13,8 +14,10 @@ const ROW_HEIGHT = 20;
 export default function App() {
   const [lines, setLines] = useState<LogLine[]>([]);
   const [fileName, setFileName] = useState('');
-  const [level, setLevel] = useState<LogLevel | ''>('');
-  const [category, setCategory] = useState<string>('');
+  // Level is a minimum-severity threshold; default to the lowest level so all
+  // levels show. Categories start all-selected (everything shown).
+  const [level, setLevel] = useState<LogLevel>(LOG_LEVELS[0]);
+  const [categories, setCategories] = useState<string[]>(LOG_CATEGORIES);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [query, setQuery] = useState('');
@@ -27,8 +30,8 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(
-    () => filterLines(lines, { level, category, from, to }),
-    [lines, level, category, from, to]
+    () => filterLines(lines, { level, categories, from, to }),
+    [lines, level, categories, from, to]
   );
 
   // Earliest/latest timestamps in the file, as `datetime-local` values, used to
@@ -146,9 +149,8 @@ export default function App() {
           />
 
           <label>
-            Level
-            <select value={level} onChange={(e) => setLevel(e.target.value as LogLevel | '')}>
-              <option value="">All</option>
+            Min level
+            <select value={level} onChange={(e) => setLevel(e.target.value as LogLevel)}>
               {LOG_LEVELS.map((l) => (
                 <option key={l} value={l}>
                   {l}
@@ -157,17 +159,7 @@ export default function App() {
             </select>
           </label>
 
-          <label>
-            Category
-            <select value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="">All</option>
-              {LOG_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
+          <CategoryFilter all={LOG_CATEGORIES} selected={categories} onChange={setCategories} />
 
           <div className="spacer" />
           <span className="meta">
@@ -202,15 +194,16 @@ export default function App() {
             />
           </label>
 
-          {(from || to) && (
+          {timeBounds.min && (
             <button
               onClick={() => {
-                setFrom('');
-                setTo('');
+                setFrom(timeBounds.min);
+                setTo(timeBounds.max);
               }}
-              title="Clear date range"
+              disabled={from === timeBounds.min && to === timeBounds.max}
+              title="Reset the range to the log's full time span"
             >
-              Clear dates
+              Reset dates
             </button>
           )}
         </div>
@@ -244,7 +237,7 @@ export default function App() {
       <div className="viewport" ref={scrollRef}>
         {lines.length === 0 ? (
           <div className={`empty ${dragOver ? 'drag' : ''}`}>
-            Drop a log file here, or click <em>Open log…</em>
+            Drop a log file here, or click <em>Open Log…</em>
           </div>
         ) : (
           <div className="rows" style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>

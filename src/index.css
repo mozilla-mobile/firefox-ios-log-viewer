@@ -1,8 +1,65 @@
 :root {
-  color-scheme: dark;
+  /* Follow the OS light/dark setting for native controls (scrollbars,
+     date picker, form widgets). The palette below flips to match. */
+  color-scheme: light dark;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+
+  /* GitHub Primer (light) palette */
+  --fg-default: #1f2328;
+  --fg-muted: #656d76;
+  --fg-accent: #0969da;
+  --canvas-default: #ffffff;
+  --canvas-subtle: #f6f8fa;
+  --border-default: #d0d7de;
+  --border-muted: #d8dee4;
+  --neutral-hover: #eff2f5;
+  --accent-subtle: #ddf4ff;
+  --accent-muted: #54aeff;
+  --success-fg: #1a7f37;
+  --attention-fg: #9a6700;
+  --attention-subtle: #fff8c5;
+  --attention-muted: #eac54f;
+  --danger-fg: #cf222e;
+  --danger-subtle: #ffebe9;
+  --sync-fg: #bc4c00;
+  --tabs-fg: #953800;
+  --btn-primary-bg: #1f883d;
+  --btn-primary-hover: #1a7f37;
+  --focus-ring: rgba(9, 105, 218, 0.3);
+
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica,
+    Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+    'Liberation Mono', monospace;
+}
+
+/* GitHub Primer (dark) palette — used when the OS is in dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg-default: #e6edf3;
+    --fg-muted: #8b949e;
+    --fg-accent: #4493f8;
+    --canvas-default: #0d1117;
+    --canvas-subtle: #161b22;
+    --border-default: #30363d;
+    --border-muted: #21262d;
+    --neutral-hover: #30363d;
+    --accent-subtle: rgba(56, 139, 253, 0.15);
+    --accent-muted: rgba(56, 139, 253, 0.4);
+    --success-fg: #3fb950;
+    --attention-fg: #d29922;
+    --attention-subtle: rgba(187, 128, 9, 0.15);
+    --attention-muted: rgba(187, 128, 9, 0.4);
+    --danger-fg: #f85149;
+    --danger-subtle: rgba(248, 81, 73, 0.15);
+    --sync-fg: #db6d28;
+    --tabs-fg: #f0883e;
+    --btn-primary-bg: #238636;
+    --btn-primary-hover: #2ea043;
+    --focus-ring: rgba(56, 139, 253, 0.4);
+  }
 }
 
 * {
@@ -17,8 +74,9 @@ body,
 }
 
 body {
-  background: #1e1e1e;
-  color: #d4d4d4;
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  background: var(--canvas-default);
+  color: var(--fg-default);
+  font-family: var(--font-ui);
+  font-size: 14px;
   overflow: hidden;
 }

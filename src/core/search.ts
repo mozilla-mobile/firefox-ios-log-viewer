@@ -1,8 +1,14 @@
 import type { LogLevel, LogLine } from './types';
+import { LOG_LEVELS } from './types';
 
 export interface Filters {
+  /// Minimum severity to show: the selected level and everything above it.
+  /// Severity order is the index in LOG_LEVELS (DEBUG < INFO < WARNING < FATAL).
   level: LogLevel | '';
-  category: string | '';
+  /// Categories to show. `undefined` means no category filter; an (empty or
+  /// non-empty) array keeps only lines whose category is listed — so an empty
+  /// array shows nothing.
+  categories?: string[];
   /// Inclusive lower/upper bounds as `datetime-local` input values
   /// (e.g. "2026-07-10T09:46" or "…:46:42"). Empty string means "unbounded".
   from?: string;
@@ -19,17 +25,21 @@ function timeKey(value: string, pad: '0' | '9' = '0'): string {
   return (value.replace(/\D/g, '') + pad.repeat(17)).slice(0, 17);
 }
 
-/// Filter parsed lines by level, category, and/or timestamp range. Empty string
-/// means "any". Unstructured lines (no level/category/timestamp) are hidden when
-/// any filter is active.
+/// Filter parsed lines by minimum level, categories, and/or timestamp range.
+/// `level` is a threshold: the selected level and anything more severe is kept.
+/// `categories`, when provided, keeps only lines whose category is in the set.
+/// Unstructured lines (no level/category/timestamp) are hidden when the
+/// corresponding filter is active.
 export function filterLines(lines: LogLine[], filters: Filters): LogLine[] {
-  const { level, category, from, to } = filters;
+  const { level, categories, from, to } = filters;
+  const minRank = level ? LOG_LEVELS.indexOf(level) : -1;
+  const catSet = categories ? new Set(categories) : null;
   const fromKey = from ? timeKey(from, '0') : '';
   const toKey = to ? timeKey(to, '9') : '';
-  if (!level && !category && !fromKey && !toKey) return lines;
+  if (minRank < 0 && !catSet && !fromKey && !toKey) return lines;
   return lines.filter((l) => {
-    if (level && l.level !== level) return false;
-    if (category && l.category !== category) return false;
+    if (minRank >= 0 && (!l.level || LOG_LEVELS.indexOf(l.level) < minRank)) return false;
+    if (catSet && (!l.category || !catSet.has(l.category))) return false;
     if (fromKey || toKey) {
       if (!l.timestamp) return false;
       const k = timeKey(l.timestamp);

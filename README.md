@@ -1,46 +1,51 @@
 # Log Viewer
 
-A bespoke viewer for Firefox iOS device logs. Runs as a standalone macOS app
-(via [Tauri](https://tauri.app)) and as a plain web page — both share the same
-UI and parsing core.
+A bespoke viewer for Firefox iOS device logs. It builds to a **single
+self-contained HTML file** you can open directly in any browser — no install,
+no server. The UI follows the GitHub design language and matches your system
+light/dark setting.
 
 ## Features
 
 - **Syntax highlighting** of each line's anatomy: timestamp, level, `[category]`,
   component, and message — plus keyword hotspots (crash/watchdog terms, lifecycle
   transitions, sync/AppServices, tab counts). Rules mirror the klogg highlighter set.
-- **Level filter** dropdown (DEBUG / INFO / WARNING / FATAL).
-- **Category filter** dropdown, populated from the canonical
-  `LoggerCategory.swift` list.
-- **Search bar** that *navigates* to matching lines: Enter jumps to the next
-  match (Shift+Enter previous), the hit is highlighted, and the row scrolls into
-  view. Shows `current/total` match count.
+- **Min-level filter** (DEBUG / INFO / WARNING / FATAL) — shows the selected
+  level and everything more severe.
+- **Category multi-select**, populated from the canonical `LoggerCategory.swift`
+  list, with Select all / Clear all.
+- **Date range** From/To pickers, prefilled to the log's full time span with a
+  Reset dates button.
+- **Live search** that *navigates* to matching lines: it searches as you type,
+  Enter jumps to the next match (Shift+Enter previous), the hit is highlighted,
+  and the row scrolls into view. Shows `current/total` match count.
 - **Single-line selection**: click a line to select+highlight it; click it again
   (or another line) to deselect. Only one line is selected at a time.
 - **Virtualized rendering** so large logs (tens of thousands of lines) stay smooth.
-- Load a file via the **Open log…** button or by **dropping** it on the window.
+- Load a file via the **Open Log…** button or by **dropping** it on the window.
 
 ## Tech
 
-- **React + Vite + TypeScript** frontend.
-- **Tauri v2** desktop shell (tiny native app using the system WebView).
+- **React + Vite + TypeScript**, bundled into one HTML file via
+  `vite-plugin-singlefile`.
 - `src/core/` is framework-agnostic TypeScript (parser, highlight rules, filter,
-  search) reused unchanged by the desktop app and any web deployment.
+  search), DOM-free and reusable in any web deployment.
 
 ## Develop
 
 ```bash
 npm install
-npm run dev          # web app at http://localhost:5173
-npm run tauri:dev    # native macOS window (hot-reloads the same UI)
+npm run dev          # dev server with hot reload
 ```
 
 ## Build
 
 ```bash
-npm run build        # static web bundle in dist/  (host anywhere)
-npm run tauri:build  # macOS .app + .dmg in src-tauri/target/release/bundle/
+npm run build        # single self-contained dist/index.html — open it directly
 ```
+
+Releases are published from CI (Actions → **Build & Release**), which attaches
+the built HTML file to a GitHub Release.
 
 ## Project layout
 
@@ -53,17 +58,18 @@ src/
     highlight.ts   LogLine -> highlight Segments (+ search overlay)
     search.ts      level/category filter + text match positions
   components/
-    LogRow.tsx     one virtualized, highlighted row
-  App.tsx          toolbar, dropdowns, search nav, virtualized list, selection
-src-tauri/         Tauri desktop shell
+    LogRow.tsx        one virtualized, highlighted row
+    CategoryFilter.tsx category multi-select dropdown
+  App.tsx          toolbar, filters, search nav, virtualized list, selection
 ```
 
 ## Reusing on the web
 
-The web build (`npm run build`) is a self-contained static site — deploy `dist/`
-as-is. To embed the viewer inside an existing page instead, import from
-`src/core/*` (parsing + highlighting are DOM-free) and reuse `LogRow`/`App`, or
-lift the toolbar + virtualized list into your own component.
+The build (`npm run build`) is a single self-contained `dist/index.html` — host
+it anywhere or just open the file. To embed the viewer inside an existing page
+instead, import from `src/core/*` (parsing + highlighting are DOM-free) and
+reuse `LogRow`/`App`, or lift the toolbar + virtualized list into your own
+component.
 
 ## Keeping categories in sync
 
