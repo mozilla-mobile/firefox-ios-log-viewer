@@ -1,7 +1,8 @@
-name: Build & Release DMG
+name: Build & Release
 
 # Manually triggered. Each run computes the next version (minor bump), builds
-# the macOS DMG, and publishes a GitHub Release with the DMG attached.
+# the self-contained single-file HTML app, and publishes a GitHub Release with
+# the HTML attached as a download.
 on:
   workflow_dispatch:
 
@@ -16,7 +17,7 @@ concurrency:
 
 jobs:
   release:
-    runs-on: macos-latest # Apple Silicon → builds an aarch64 DMG
+    runs-on: ubuntu-latest # pure web build — no macOS/Rust needed
 
     steps:
       - name: Checkout
@@ -29,8 +30,7 @@ jobs:
         run: |
           set -euo pipefail
           # Version scheme: 0.MINOR.0, starting at 0.1.0 and bumping the minor
-          # on every run. The source of truth is the latest published release;
-          # the repo files are not committed back to.
+          # on every run, derived from the latest published release.
           #
           # NOTE: on a 404 (no releases yet) `gh api --jq` still prints the raw
           # error JSON to stdout, so a plain emptiness check is not enough — we
@@ -48,78 +48,38 @@ jobs:
           echo "version=$next" >> "$GITHUB_OUTPUT"
           echo "tag=v$next" >> "$GITHUB_OUTPUT"
 
-      - name: Apply version to build config
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          set -euo pipefail
-          # tauri.conf.json drives the app version and the DMG file name.
-          tmp=$(mktemp)
-          jq --arg v "$VERSION" '.version = $v' src-tauri/tauri.conf.json > "$tmp"
-          mv "$tmp" src-tauri/tauri.conf.json
-          # Keep the Rust crate version in sync (first `version = ` line only;
-          # awk handles first-match-only portably, unlike BSD sed's `0,/re/`).
-          awk -v v="$VERSION" \
-            '!done && /^version = "/ { sub(/"[^"]*"/, "\"" v "\""); done=1 } { print }' \
-            src-tauri/Cargo.toml > src-tauri/Cargo.toml.tmp
-          mv src-tauri/Cargo.toml.tmp src-tauri/Cargo.toml
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            src-tauri/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
-
       - name: Install dependencies
         run: npm ci
 
-      - name: Build DMG
-        # Tauri reads these env vars during `tauri build`: the first group
-        # imports the Developer ID cert and code-signs the app; the second
-        # notarizes and staples it. If the secrets are unset (empty), Tauri
-        # falls back to an ad-hoc signature and skips notarization, so this
-        # step stays green until the secrets are configured.
-        env:
-          # Code signing
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          # Notarization (Apple ID + app-specific password)
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: npm run tauri:build
+      - name: Build single-file HTML
+        run: npm run build
 
-      - name: Locate DMG
-        id: dmg
+      - name: Stage release asset
+        id: asset
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
-          dmg=$(ls src-tauri/target/release/bundle/dmg/*.dmg | head -1)
-          echo "Found: $dmg"
-          echo "path=$dmg" >> "$GITHUB_OUTPUT"
+          asset="firefox-ios-log-viewer-${VERSION}.html"
+          cp dist/index.html "$asset"
+          echo "Staged $asset ($(wc -c < "$asset") bytes)"
+          echo "path=$asset" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.version.outputs.tag }}
-          DMG: ${{ steps.dmg.outputs.path }}
+          ASSET: ${{ steps.asset.outputs.path }}
         run: |
           set -euo pipefail
           gh release create "$TAG" \
             --title "$TAG" \
             --target "$GITHUB_SHA" \
             --generate-notes \
-            "$DMG"
+            "$ASSET"
