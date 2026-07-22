@@ -194,15 +194,16 @@ export default function App() {
             />
           </label>
 
-          {(from || to) && (
+          {timeBounds.min && (
             <button
               onClick={() => {
-                setFrom('');
-                setTo('');
+                setFrom(timeBounds.min);
+                setTo(timeBounds.max);
               }}
-              title="Clear date range"
+              disabled={from === timeBounds.min && to === timeBounds.max}
+              title="Reset the range to the log's full time span"
             >
-              Clear dates
+              Reset dates
             </button>
           )}
         </div>
